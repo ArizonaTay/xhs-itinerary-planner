@@ -1,0 +1,22 @@
+services:
+  # Xiaohongshu MCP server — provides search_feeds tool via Streamable HTTP
+  xhs-mcp:
+    image: xpzouying/xiaohongshu-mcp:v1.1.2
+    ports:
+      - "18060:18060"
+    env_file:
+      - .env
+    environment:
+      XHS_COOKIE: ${XHS_COOKIE}
+
+  # FastAPI application server
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    environment:
+      XHS_MCP_URL: http://xhs-mcp:18060/mcp
+    depends_on:
+      - xhs-mcp

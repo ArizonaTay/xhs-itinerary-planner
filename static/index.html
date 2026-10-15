@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>XHS Travel Planner</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: { 50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa', 500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8' },
+                        accent: { 50: '#fdf4ff', 100: '#fae8ff', 200: '#f5d0fe', 300: '#f0abfc', 400: '#e879f9', 500: '#d946ef', 600: '#c026d3', 700: '#a21caf' },
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
+    <div class="max-w-6xl mx-auto px-4 py-8">
+        <!-- Header -->
+        <header class="text-center mb-10">
+            <h1 class="text-4xl font-bold text-slate-800 mb-2">
+                <span class="text-primary-600">XHS</span> Travel Planner
+            </h1>
+            <p class="text-slate-500 text-lg">
+                Discover travel itineraries powered by Xiaohongshu & AI
+            </p>
+        </header>
+
+        <!-- Input Form -->
+        <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 max-w-2xl mx-auto">
+            <form id="travelForm" class="space-y-4">
+                <div class="flex flex-col md:flex-row gap-4">
+                    <div class="flex-1">
+                        <label for="destination" class="block text-sm font-medium text-slate-700 mb-1">Destination</label>
+                        <input
+                            type="text"
+                            id="destination"
+                            name="destination"
+                            placeholder="e.g. Japan, Paris, Bali..."
+                            required
+                            class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                        />
+                    </div>
+                    <div class="w-full md:w-32">
+                        <label for="days" class="block text-sm font-medium text-slate-700 mb-1">Days</label>
+                        <input
+                            type="number"
+                            id="days"
+                            name="days"
+                            min="1"
+                            max="30"
+                            value="3"
+                            required
+                            class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition"
+                        />
+                    </div>
+                </div>
+                <button
+                    type="submit"
+                    id="generateBtn"
+                    class="w-full bg-gradient-to-r from-primary-600 to-accent-600 hover:from-primary-700 hover:to-accent-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Generate Itinerary
+                </button>
+            </form>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loading" class="hidden text-center py-12">
+            <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-200 border-t-primary-600 mb-4"></div>
+            <p class="text-slate-500">Searching Xiaohongshu and crafting your itinerary...</p>
+        </div>
+
+        <!-- Error Message -->
+        <div id="error" class="hidden bg-red-50 border border-red-200 text-red-700 rounded-lg p-4 mb-8 max-w-2xl mx-auto">
+            <p id="errorMessage" class="text-sm"></p>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="hidden">
+            <div class="text-center mb-8">
+                <h2 class="text-2xl font-bold text-slate-800" id="resultsTitle">Your Itinerary</h2>
+                <p class="text-slate-500" id="resultsSubtitle"></p>
+            </div>
+
+            <div class="grid md:grid-cols-2 gap-6">
+                <!-- Viral Hits Column -->
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <div class="bg-gradient-to-r from-rose-500 to-pink-600 px-6 py-4">
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.656 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/>
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"/>
+                            </svg>
+                            Viral Hits
+                        </h3>
+                        <p class="text-pink-100 text-sm">Popular spots everyone's talking about</p>
+                    </div>
+                    <div id="viralHitsList" class="divide-y divide-slate-100"></div>
+                </div>
+
+                <!-- Fresh Finds Column -->
+                <div class="bg-white rounded-2xl shadow-lg overflow-hidden">
+                    <div class="bg-gradient-to-r from-emerald-500 to-teal-600 px-6 py-4">
+                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Fresh Finds
+                        </h3>
+                        <p class="text-emerald-100 text-sm">Hidden gems and local secrets</p>
+                    </div>
+                    <div id="freshFindsList" class="divide-y divide-slate-100"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const form = document.getElementById('travelForm');
+        const loading = document.getElementById('loading');
+        const error = document.getElementById('error');
+        const errorMessage = document.getElementById('errorMessage');
+        const results = document.getElementById('results');
+        const resultsTitle = document.getElementById('resultsTitle');
+        const resultsSubtitle = document.getElementById('resultsSubtitle');
+        const viralHitsList = document.getElementById('viralHitsList');
+        const freshFindsList = document.getElementById('freshFindsList');
+        const generateBtn = document.getElementById('generateBtn');
+
+        function getCategoryBadge(category) {
+            const colors = {
+                food: 'bg-orange-100 text-orange-700',
+                sightseeing: 'bg-blue-100 text-blue-700',
+                shopping: 'bg-purple-100 text-purple-700',
+                entertainment: 'bg-yellow-100 text-yellow-700',
+                nature: 'bg-green-100 text-green-700',
+                culture: 'bg-indigo-100 text-indigo-700',
+            };
+            const cls = colors[category] || 'bg-slate-100 text-slate-700';
+            return `<span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full ${cls}">${category}</span>`;
+        }
+
+        function renderActivity(activity) {
+            return `
+                <div class="px-6 py-4 hover:bg-slate-50 transition">
+                    <div class="flex items-start justify-between mb-1">
+                        <h4 class="font-semibold text-slate-800">${activity.name}</h4>
+                        <span class="text-sm text-slate-400 whitespace-nowrap ml-2">${activity.estimated_hours}h</span>
+                    </div>
+                    <p class="text-sm text-slate-600 mb-2">${activity.description}</p>
+                    ${getCategoryBadge(activity.category)}
+                </div>
+            `;
+        }
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const destination = document.getElementById('destination').value.trim();
+            const days = parseInt(document.getElementById('days').value, 10);
+
+            if (!destination) {
+                showError('Please enter a destination.');
+                return;
+            }
+
+            // Hide previous results/errors, show loading
+            results.classList.add('hidden');
+            error.classList.add('hidden');
+            loading.classList.remove('hidden');
+            generateBtn.disabled = true;
+
+            try {
+                const response = await fetch('/generate-itinerary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ destination, days }),
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    throw new Error(errData.detail || `Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                // Update results
+                resultsTitle.textContent = `${data.destination} Travel Itinerary`;
+                resultsSubtitle.textContent = `${data.days} day${data.days > 1 ? 's' : ''} of curated experiences`;
+
+                // Render viral hits
+                viralHitsList.innerHTML = data.viral_hits.map(renderActivity).join('');
+
+                // Render fresh finds
+                freshFindsList.innerHTML = data.fresh_finds.map(renderActivity).join('');
+
+                loading.classList.add('hidden');
+                results.classList.remove('hidden');
+
+                // Scroll to results
+                results.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                loading.classList.add('hidden');
+                generateBtn.disabled = false;
+            }
+        });
+
+        function showError(msg) {
+            errorMessage.textContent = msg;
+            error.classList.remove('hidden');
+            loading.classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
