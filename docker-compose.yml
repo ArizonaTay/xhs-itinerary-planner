@@ -1,13 +1,22 @@
 services:
-  # Xiaohongshu MCP server — provides search_feeds tool via Streamable HTTP
+  # Xiaohongshu MCP server — owns the XHS session (QR login) and exposes MCP tools.
+  # Login state lives in ./data, so it survives container restarts.
   xhs-mcp:
-    image: xpzouying/xiaohongshu-mcp:v1.1.2
+    image: xpzouying/xiaohongshu-mcp
+    container_name: xhs-mcp
+    restart: unless-stopped
+    tty: true
     ports:
       - "18060:18060"
-    env_file:
-      - .env
+    volumes:
+      - ./data:/app/data
+      - ./images:/app/images
     environment:
-      XHS_COOKIE: ${XHS_COOKIE}
+      COOKIES_PATH: /app/data/cookies.json
+      HOME: /app/data/home
+      XDG_CONFIG_HOME: /app/data/config
+      # Optional: set XHS_AUTH_TOKEN in .env to require a bearer token on the MCP endpoint.
+      AUTH_TOKEN: ${XHS_AUTH_TOKEN:-}
 
   # FastAPI application server
   api:

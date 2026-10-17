@@ -17,21 +17,52 @@
             }
         }
     </script>
+    <style>
+        .mode-tab { flex: 1; padding: 0.625rem 1rem; border-radius: 0.5rem; font-weight: 600; font-size: 0.875rem; transition: background-color 0.15s, color 0.15s; }
+        .mode-tab[aria-selected="true"] { background: linear-gradient(90deg, #2563eb, #c026d3); color: #fff; box-shadow: 0 1px 3px rgba(15, 23, 42, 0.18); }
+        .mode-tab[aria-selected="false"] { color: #475569; }
+        .mode-tab[aria-selected="false"]:hover { background: #f1f5f9; color: #1e293b; }
+        .pill { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.2rem 0.6rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 500; }
+    </style>
 </head>
 <body class="bg-gradient-to-br from-slate-50 to-slate-100 min-h-screen">
     <div class="max-w-6xl mx-auto px-4 py-8">
         <!-- Header -->
-        <header class="text-center mb-10">
+        <header class="text-center mb-8">
             <h1 class="text-4xl font-bold text-slate-800 mb-2">
                 <span class="text-primary-600">XHS</span> Travel Planner
             </h1>
             <p class="text-slate-500 text-lg">
-                Discover travel itineraries powered by Xiaohongshu & AI
+                Turn Xiaohongshu notes into an itinerary — or a short-video script
             </p>
+            <button id="xhsStatusBtn" type="button" class="mt-3 inline-flex items-center gap-2 pill bg-slate-100 text-slate-600 transition">
+                <span id="xhsStatusDot" class="w-2 h-2 rounded-full bg-slate-400"></span>
+                <span id="xhsStatusText">Xiaohongshu: checking…</span>
+            </button>
         </header>
 
-        <!-- Input Form -->
-        <div class="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 max-w-2xl mx-auto">
+        <!-- Mode tabs -->
+        <div class="max-w-2xl mx-auto mb-4">
+            <div class="flex gap-1 bg-white rounded-xl shadow-sm p-1" role="tablist" aria-label="Generation mode">
+                <button id="tabItinerary" role="tab" aria-selected="true" aria-controls="itineraryPanel" class="mode-tab">
+                    Itinerary
+                </button>
+                <button id="tabShort" role="tab" aria-selected="false" aria-controls="shortPanel" class="mode-tab">
+                    Short video
+                </button>
+            </div>
+        </div>
+
+        <!-- Sign-in banner -->
+        <div id="loginBanner" class="hidden max-w-2xl mx-auto mb-4 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+            <p class="text-sm"><strong>Not signed in to Xiaohongshu.</strong> Scan a QR code once so searches can return notes.</p>
+            <button id="loginBannerBtn" type="button" class="shrink-0 text-sm font-semibold bg-amber-900 text-white px-3 py-1.5 rounded-lg hover:bg-amber-800 transition">
+                Sign in
+            </button>
+        </div>
+
+        <!-- Itinerary form -->
+        <div id="itineraryPanel" class="bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 max-w-2xl mx-auto">
             <form id="travelForm" class="space-y-4">
                 <div class="flex flex-col md:flex-row gap-4">
                     <div class="flex-1">
@@ -69,10 +100,64 @@
             </form>
         </div>
 
+        <!-- Short form -->
+        <div id="shortPanel" class="hidden bg-white rounded-2xl shadow-lg p-6 md:p-8 mb-8 max-w-2xl mx-auto">
+            <form id="shortForm" class="space-y-4">
+                <div>
+                    <label for="query" class="block text-sm font-medium text-slate-700 mb-1">Your question</label>
+                    <textarea
+                        id="query"
+                        name="query"
+                        rows="2"
+                        maxlength="200"
+                        placeholder="e.g. How to do a day trip to Snow Town?"
+                        required
+                        class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition resize-none"
+                    ></textarea>
+                    <p class="mt-1 text-xs text-slate-400">Ask like a viewer would. The search keyword is resolved automatically.</p>
+                </div>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <div class="flex-1">
+                        <label for="duration" class="block text-sm font-medium text-slate-700 mb-1">Length</label>
+                        <select
+                            id="duration"
+                            name="duration"
+                            class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition bg-white"
+                        >
+                            <option value="15">15 seconds</option>
+                            <option value="30" selected>30 seconds</option>
+                            <option value="45">45 seconds</option>
+                            <option value="60">60 seconds</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label for="platform" class="block text-sm font-medium text-slate-700 mb-1">Platform</label>
+                        <select
+                            id="platform"
+                            name="platform"
+                            class="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none transition bg-white"
+                        >
+                            <option value="shorts" selected>YouTube Shorts</option>
+                            <option value="reels">Instagram Reels</option>
+                            <option value="tiktok">TikTok</option>
+                            <option value="xhs">Xiaohongshu</option>
+                        </select>
+                    </div>
+                </div>
+                <button
+                    type="submit"
+                    id="generateShortBtn"
+                    class="w-full bg-gradient-to-r from-primary-600 to-accent-600 hover:from-primary-700 hover:to-accent-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                    Generate Short Script
+                </button>
+            </form>
+        </div>
+
         <!-- Loading Spinner -->
         <div id="loading" class="hidden text-center py-12">
             <div class="inline-block animate-spin rounded-full h-12 w-12 border-4 border-primary-200 border-t-primary-600 mb-4"></div>
-            <p class="text-slate-500">Searching Xiaohongshu and crafting your itinerary...</p>
+            <p id="loadingText" class="text-slate-500">Searching Xiaohongshu and crafting your itinerary...</p>
         </div>
 
         <!-- Error Message -->
@@ -80,8 +165,8 @@
             <p id="errorMessage" class="text-sm"></p>
         </div>
 
-        <!-- Results -->
-        <div id="results" class="hidden">
+        <!-- Itinerary results -->
+        <div id="itineraryResults" class="hidden">
             <div class="text-center mb-8">
                 <h2 class="text-2xl font-bold text-slate-800" id="resultsTitle">Your Itinerary</h2>
                 <p class="text-slate-500" id="resultsSubtitle"></p>
@@ -118,19 +203,346 @@
                 </div>
             </div>
         </div>
+
+        <!-- Short results -->
+        <div id="shortResults" class="hidden max-w-3xl mx-auto">
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden mb-6">
+                <div class="bg-gradient-to-r from-primary-600 to-accent-600 px-6 py-5 text-white">
+                    <p class="text-xs font-semibold uppercase tracking-widest text-white/70 mb-1">Short video script</p>
+                    <h2 id="shortTitle" class="text-2xl font-bold leading-snug"></h2>
+                    <p id="shortHook" class="mt-2 text-white/90"></p>
+                </div>
+                <div class="px-6 py-4 flex flex-wrap items-center gap-2">
+                    <span id="shortKeyword" class="pill bg-slate-100 text-slate-700"></span>
+                    <span id="shortMeta" class="pill bg-slate-100 text-slate-700"></span>
+                    <span id="shortGrounding" class="pill"></span>
+                </div>
+                <div id="shortWarnings" class="hidden px-6 pb-5 space-y-2"></div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between mb-5">
+                    <h3 class="font-bold text-slate-800">Scene by scene</h3>
+                    <button id="copyScriptBtn" type="button" class="text-sm font-semibold text-primary-600 hover:text-primary-700 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition">
+                        Copy full script
+                    </button>
+                </div>
+                <div id="sceneList" class="space-y-5"></div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
+                <div class="flex items-center justify-between mb-2">
+                    <h3 class="font-bold text-slate-800">Caption</h3>
+                    <button id="copyCaptionBtn" type="button" class="text-sm font-semibold text-primary-600 hover:text-primary-700 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition">
+                        Copy
+                    </button>
+                </div>
+                <p id="shortCaption" class="text-slate-700 whitespace-pre-wrap"></p>
+                <div id="shortTags" class="flex flex-wrap gap-2 mt-4"></div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg p-6">
+                <h3 class="font-bold text-slate-800 mb-1">Grounded in</h3>
+                <p class="text-xs text-slate-400 mb-3">Open a note to check the details the script relies on.</p>
+                <ul id="sourceList" class="space-y-2"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Xiaohongshu login modal -->
+    <div id="loginModal" class="hidden fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden" role="dialog" aria-modal="true" aria-labelledby="loginTitle">
+            <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+                <h2 id="loginTitle" class="font-bold text-slate-800">Sign in to Xiaohongshu</h2>
+                <button id="loginCloseBtn" type="button" class="text-slate-400 hover:text-slate-600 text-2xl leading-none" aria-label="Close">&times;</button>
+            </div>
+            <div class="p-5 text-center">
+                <div id="qrWrap" class="hidden">
+                    <img id="qrImage" alt="Xiaohongshu login QR code" class="mx-auto w-56 h-56 bg-white border border-slate-200 rounded-xl p-2" />
+                    <p class="mt-3 text-sm font-medium text-slate-700">Scan with the Xiaohongshu app</p>
+                    <p id="qrHint" class="mt-1 text-xs text-slate-400"></p>
+                </div>
+                <div id="qrLoading" class="py-10">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-primary-200 border-t-primary-600"></div>
+                    <p class="mt-3 text-sm text-slate-500">Requesting QR code…</p>
+                </div>
+                <p id="loginError" class="hidden mt-3 text-sm text-red-600 text-left"></p>
+                <div class="mt-4 flex items-center justify-center gap-2 text-xs text-slate-500">
+                    <span id="loginWaitDot" class="inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="loginWaitText">Waiting for you to scan…</span>
+                </div>
+                <button id="loginRetryBtn" type="button" class="hidden mt-4 text-sm font-semibold text-primary-600 hover:text-primary-700">
+                    Get a new QR code
+                </button>
+            </div>
+        </div>
     </div>
 
     <script>
-        const form = document.getElementById('travelForm');
+        const state = { mode: 'itinerary', short: null, loadingTimer: null, xhsStatus: 'checking' };
+
+        const tabItinerary = document.getElementById('tabItinerary');
+        const tabShort = document.getElementById('tabShort');
+        const itineraryPanel = document.getElementById('itineraryPanel');
+        const shortPanel = document.getElementById('shortPanel');
+
         const loading = document.getElementById('loading');
+        const loadingText = document.getElementById('loadingText');
         const error = document.getElementById('error');
         const errorMessage = document.getElementById('errorMessage');
-        const results = document.getElementById('results');
+
+        const itineraryResults = document.getElementById('itineraryResults');
         const resultsTitle = document.getElementById('resultsTitle');
         const resultsSubtitle = document.getElementById('resultsSubtitle');
         const viralHitsList = document.getElementById('viralHitsList');
         const freshFindsList = document.getElementById('freshFindsList');
         const generateBtn = document.getElementById('generateBtn');
+
+        const shortResults = document.getElementById('shortResults');
+        const shortTitle = document.getElementById('shortTitle');
+        const shortHook = document.getElementById('shortHook');
+        const shortKeyword = document.getElementById('shortKeyword');
+        const shortMeta = document.getElementById('shortMeta');
+        const shortGrounding = document.getElementById('shortGrounding');
+        const shortWarnings = document.getElementById('shortWarnings');
+        const sceneList = document.getElementById('sceneList');
+        const shortCaption = document.getElementById('shortCaption');
+        const shortTags = document.getElementById('shortTags');
+        const sourceList = document.getElementById('sourceList');
+        const generateShortBtn = document.getElementById('generateShortBtn');
+
+        // ------------------------------------------------------------------
+        // Utilities
+        // ------------------------------------------------------------------
+
+        const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[char]));
+
+        const escapeAttr = escapeHtml;
+
+        async function copyText(text, button, idleLabel) {
+            try {
+                if (navigator.clipboard && window.isSecureContext) {
+                    await navigator.clipboard.writeText(text);
+                } else {
+                    const helper = document.createElement('textarea');
+                    helper.value = text;
+                    helper.style.position = 'fixed';
+                    helper.style.opacity = '0';
+                    document.body.appendChild(helper);
+                    helper.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(helper);
+                }
+                const original = idleLabel;
+                button.textContent = 'Copied!';
+                button.disabled = true;
+                setTimeout(() => {
+                    button.textContent = original;
+                    button.disabled = false;
+                }, 1500);
+            } catch (err) {
+                showError('Could not copy to the clipboard: ' + err.message);
+            }
+        }
+
+        function setMode(mode) {
+            state.mode = mode;
+            tabItinerary.setAttribute('aria-selected', String(mode === 'itinerary'));
+            tabShort.setAttribute('aria-selected', String(mode === 'short'));
+            itineraryPanel.classList.toggle('hidden', mode !== 'itinerary');
+            shortPanel.classList.toggle('hidden', mode !== 'short');
+            itineraryResults.classList.add('hidden');
+            shortResults.classList.add('hidden');
+            error.classList.add('hidden');
+        }
+
+        function showError(message) {
+            errorMessage.textContent = message;
+            error.classList.remove('hidden');
+            stopLoading();
+        }
+
+        const LOADING_STEPS = {
+            itinerary: ['Searching Xiaohongshu and crafting your itinerary...'],
+            short: ['Searching Xiaohongshu notes...', 'Writing the short script...'],
+        };
+
+        function startLoading(mode) {
+            const steps = LOADING_STEPS[mode] || LOADING_STEPS.itinerary;
+            clearTimeout(state.loadingTimer);
+            loadingText.textContent = steps[0];
+            loading.classList.remove('hidden');
+            if (steps.length > 1) {
+                state.loadingTimer = setTimeout(() => {
+                    loadingText.textContent = steps[1];
+                }, 3000);
+            }
+        }
+
+        function stopLoading() {
+            clearTimeout(state.loadingTimer);
+            state.loadingTimer = null;
+            loading.classList.add('hidden');
+        }
+
+        function readError(data, status) {
+            const detail = data && data.detail;
+            if (typeof detail === 'string' && detail) return detail;
+            if (detail && typeof detail === 'object' && detail.message) return detail.message;
+            return `Server error: ${status}`;
+        }
+
+        // ------------------------------------------------------------------
+        // Xiaohongshu sign-in (QR handled by the MCP container)
+        // ------------------------------------------------------------------
+
+        const xhsStatusBtn = document.getElementById('xhsStatusBtn');
+        const xhsStatusDot = document.getElementById('xhsStatusDot');
+        const xhsStatusText = document.getElementById('xhsStatusText');
+        const loginBanner = document.getElementById('loginBanner');
+        const loginBannerBtn = document.getElementById('loginBannerBtn');
+        const loginModal = document.getElementById('loginModal');
+        const loginCloseBtn = document.getElementById('loginCloseBtn');
+        const loginRetryBtn = document.getElementById('loginRetryBtn');
+        const loginError = document.getElementById('loginError');
+        const loginWaitDot = document.getElementById('loginWaitDot');
+        const loginWaitText = document.getElementById('loginWaitText');
+        const qrWrap = document.getElementById('qrWrap');
+        const qrImage = document.getElementById('qrImage');
+        const qrHint = document.getElementById('qrHint');
+        const qrLoading = document.getElementById('qrLoading');
+
+        const login = { pollTimer: null };
+
+        const STATUS_STYLES = {
+            checking: { dot: 'bg-slate-400', chip: 'bg-slate-100 text-slate-600', label: 'Xiaohongshu: checking…' },
+            in: { dot: 'bg-emerald-500', chip: 'bg-emerald-50 text-emerald-700', label: 'Xiaohongshu: signed in' },
+            out: { dot: 'bg-amber-500', chip: 'bg-amber-50 text-amber-800', label: 'Xiaohongshu: not signed in' },
+            down: { dot: 'bg-red-500', chip: 'bg-red-50 text-red-700', label: 'Xiaohongshu: MCP unreachable' },
+        };
+
+        function setXhsStatus(stateName, text) {
+            state.xhsStatus = stateName;
+            const style = STATUS_STYLES[stateName] || STATUS_STYLES.checking;
+            xhsStatusDot.className = `w-2 h-2 rounded-full ${style.dot}`;
+            xhsStatusBtn.className = `mt-3 inline-flex items-center gap-2 pill ${style.chip} hover:brightness-95 transition`;
+            xhsStatusText.textContent = text || style.label;
+            loginBanner.classList.toggle('hidden', stateName !== 'out');
+        }
+
+        async function refreshLoginStatus({ prompt = false, attempts = 6 } = {}) {
+            for (let attempt = 1; attempt <= attempts; attempt += 1) {
+                try {
+                    const response = await fetch('/api/xhs/login');
+                    if (!response.ok) throw new Error(`status ${response.status}`);
+                    const data = await response.json();
+                    if (data.logged_in) {
+                        setXhsStatus('in', data.username ? `Xiaohongshu: ${data.username}` : 'Xiaohongshu: signed in');
+                    } else {
+                        setXhsStatus('out');
+                        if (prompt) openLogin();
+                    }
+                    return data;
+                } catch (err) {
+                    setXhsStatus('down');
+                    // The MCP container may still be binding right after boot;
+                    // keep checking for ~25s instead of sticking on "unreachable".
+                    if (attempt < attempts) {
+                        await new Promise((resolve) => setTimeout(resolve, 5000));
+                    }
+                }
+            }
+            return null;
+        }
+
+        function stopLoginPolling() {
+            clearInterval(login.pollTimer);
+            login.pollTimer = null;
+        }
+
+        function closeLogin() {
+            stopLoginPolling();
+            loginModal.classList.add('hidden');
+        }
+
+        async function openLogin() {
+            loginModal.classList.remove('hidden');
+            loginError.classList.add('hidden');
+            qrWrap.classList.add('hidden');
+            qrLoading.classList.remove('hidden');
+            loginRetryBtn.classList.add('hidden');
+            loginWaitDot.className = 'inline-block w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+            loginWaitText.textContent = 'Waiting for you to scan…';
+            stopLoginPolling();
+
+            let payload;
+            let status;
+            try {
+                const response = await fetch('/api/xhs/login/qrcode', { method: 'POST' });
+                status = response.status;
+                payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(readError(payload, status));
+            } catch (err) {
+                qrLoading.classList.add('hidden');
+                loginWaitDot.className = 'inline-block w-2 h-2 rounded-full bg-slate-300';
+                loginWaitText.textContent = 'Not waiting — the QR code could not be loaded';
+                loginError.textContent = err.message;
+                loginError.classList.remove('hidden');
+                loginRetryBtn.classList.remove('hidden');
+                return;
+            }
+
+            qrImage.src = payload.image;
+            qrHint.textContent = payload.hint || '';
+            qrLoading.classList.add('hidden');
+            qrWrap.classList.remove('hidden');
+
+            login.pollTimer = setInterval(async () => {
+                try {
+                    const statusRes = await fetch('/api/xhs/login');
+                    if (!statusRes.ok) return;
+                    const statusData = await statusRes.json();
+                    if (statusData.logged_in) {
+                        stopLoginPolling();
+                        setXhsStatus('in', statusData.username ? `Xiaohongshu: ${statusData.username}` : 'Xiaohongshu: signed in');
+                        loginModal.classList.add('hidden');
+                    }
+                } catch (err) {
+                    /* keep polling; transient network blips are fine */
+                }
+            }, 3000);
+        }
+
+        xhsStatusBtn.addEventListener('click', async () => {
+            if (state.xhsStatus === 'in') {
+                const confirmed = window.confirm(
+                    'Sign out of Xiaohongshu on this MCP container? You will need to scan a new QR code.'
+                );
+                if (!confirmed) return;
+                try {
+                    await fetch('/api/xhs/logout', { method: 'POST' });
+                } catch (err) {
+                    /* fall through to the QR prompt */
+                }
+                setXhsStatus('out');
+            }
+            openLogin();
+        });
+        loginBannerBtn.addEventListener('click', openLogin);
+        loginCloseBtn.addEventListener('click', closeLogin);
+        loginRetryBtn.addEventListener('click', openLogin);
+        loginModal.addEventListener('click', (event) => {
+            if (event.target === loginModal) closeLogin();
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && !loginModal.classList.contains('hidden')) closeLogin();
+        });
+
+        // ------------------------------------------------------------------
+        // Itinerary mode
+        // ------------------------------------------------------------------
 
         function getCategoryBadge(category) {
             const colors = {
@@ -142,24 +554,24 @@
                 culture: 'bg-indigo-100 text-indigo-700',
             };
             const cls = colors[category] || 'bg-slate-100 text-slate-700';
-            return `<span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full ${cls}">${category}</span>`;
+            return `<span class="inline-block text-xs font-medium px-2 py-0.5 rounded-full ${cls}">${escapeHtml(category)}</span>`;
         }
 
         function renderActivity(activity) {
             return `
                 <div class="px-6 py-4 hover:bg-slate-50 transition">
                     <div class="flex items-start justify-between mb-1">
-                        <h4 class="font-semibold text-slate-800">${activity.name}</h4>
-                        <span class="text-sm text-slate-400 whitespace-nowrap ml-2">${activity.estimated_hours}h</span>
+                        <h4 class="font-semibold text-slate-800">${escapeHtml(activity.name)}</h4>
+                        <span class="text-sm text-slate-400 whitespace-nowrap ml-2">${escapeHtml(activity.estimated_hours)}h</span>
                     </div>
-                    <p class="text-sm text-slate-600 mb-2">${activity.description}</p>
+                    <p class="text-sm text-slate-600 mb-2">${escapeHtml(activity.description)}</p>
                     ${getCategoryBadge(activity.category)}
                 </div>
             `;
         }
 
-        form.addEventListener('submit', async (e) => {
-            e.preventDefault();
+        document.getElementById('travelForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
 
             const destination = document.getElementById('destination').value.trim();
             const days = parseInt(document.getElementById('days').value, 10);
@@ -169,10 +581,10 @@
                 return;
             }
 
-            // Hide previous results/errors, show loading
-            results.classList.add('hidden');
+            itineraryResults.classList.add('hidden');
+            shortResults.classList.add('hidden');
             error.classList.add('hidden');
-            loading.classList.remove('hidden');
+            startLoading('itinerary');
             generateBtn.disabled = true;
 
             try {
@@ -184,40 +596,205 @@
 
                 if (!response.ok) {
                     const errData = await response.json().catch(() => ({}));
-                    throw new Error(errData.detail || `Server error: ${response.status}`);
+                    if (response.status === 401) {
+                        openLogin();
+                        throw new Error('Sign in to Xiaohongshu to search notes.');
+                    }
+                    throw new Error(readError(errData, response.status));
                 }
 
                 const data = await response.json();
 
-                // Update results
                 resultsTitle.textContent = `${data.destination} Travel Itinerary`;
                 resultsSubtitle.textContent = `${data.days} day${data.days > 1 ? 's' : ''} of curated experiences`;
 
-                // Render viral hits
                 viralHitsList.innerHTML = data.viral_hits.map(renderActivity).join('');
-
-                // Render fresh finds
                 freshFindsList.innerHTML = data.fresh_finds.map(renderActivity).join('');
 
-                loading.classList.add('hidden');
-                results.classList.remove('hidden');
-
-                // Scroll to results
-                results.scrollIntoView({ behavior: 'smooth', block: 'start' });
-
+                stopLoading();
+                itineraryResults.classList.remove('hidden');
+                itineraryResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
             } catch (err) {
                 showError(err.message);
             } finally {
-                loading.classList.add('hidden');
+                stopLoading();
                 generateBtn.disabled = false;
             }
         });
 
-        function showError(msg) {
-            errorMessage.textContent = msg;
-            error.classList.remove('hidden');
-            loading.classList.add('hidden');
+        // ------------------------------------------------------------------
+        // Short mode
+        // ------------------------------------------------------------------
+
+        const GROUNDING_STYLES = {
+            full: { label: 'Fully grounded', cls: 'bg-emerald-100 text-emerald-700' },
+            partial: { label: 'Needs verification', cls: 'bg-amber-100 text-amber-800' },
+            none: { label: 'No source notes', cls: 'bg-slate-100 text-slate-600' },
+        };
+
+        function renderScene(scene, total) {
+            const isLast = scene.index === total;
+            return `
+                <div class="flex gap-4">
+                    <div class="flex flex-col items-center shrink-0">
+                        <span class="text-[11px] font-bold px-2 py-1 rounded-md bg-slate-900 text-white whitespace-nowrap">${escapeHtml(scene.time_range)}</span>
+                        ${isLast ? '' : '<span class="w-px flex-1 bg-slate-200 my-2"></span>'}
+                    </div>
+                    <div class="flex-1 ${isLast ? '' : 'pb-2'}">
+                        <p class="text-[11px] font-semibold uppercase tracking-widest text-primary-600 mb-0.5">On screen</p>
+                        <p class="text-lg font-bold text-slate-900 leading-snug">${escapeHtml(scene.on_screen_text)}</p>
+                        <p class="mt-2 text-slate-700">${escapeHtml(scene.voiceover)}</p>
+                        ${scene.visual ? `<p class="mt-1 text-sm text-slate-500 italic">Visual: ${escapeHtml(scene.visual)}</p>` : ''}
+                    </div>
+                </div>
+            `;
         }
+
+        function renderSources(sources) {
+            if (!sources.length) {
+                return '<li class="text-sm text-slate-400">No source notes were returned for this script.</li>';
+            }
+            return sources.map((source) => {
+                const label = escapeHtml(source.title);
+                const likes = typeof source.likes === 'number' ? ` · ${source.likes.toLocaleString()} likes` : '';
+                const author = source.author ? ` · ${escapeHtml(source.author)}` : '';
+                const title = source.url
+                    ? `<a href="${escapeAttr(source.url)}" target="_blank" rel="noopener noreferrer" class="font-medium text-slate-800 hover:text-primary-600 hover:underline">${label}</a>`
+                    : `<span class="font-medium text-slate-800">${label}</span>`;
+                return `<li class="flex items-start gap-2 text-sm">
+                    <span class="text-slate-300 mt-0.5">&#8599;</span>
+                    <span>${title}<span class="text-slate-400">${author}${likes}</span></span>
+                </li>`;
+            }).join('');
+        }
+
+        function buildScriptText(data) {
+            const lines = [data.title, '', `HOOK: ${data.hook}`, ''];
+            data.scenes.forEach((scene) => {
+                lines.push(`[${scene.time_range}] ${scene.on_screen_text}`);
+                if (scene.voiceover) lines.push(`  VO: ${scene.voiceover}`);
+                if (scene.visual) lines.push(`  VISUAL: ${scene.visual}`);
+                lines.push('');
+            });
+            if (data.caption) lines.push(`CAPTION: ${data.caption}`);
+            if (data.hashtags.length) lines.push(`HASHTAGS: ${data.hashtags.join(' ')}`);
+            if (data.sources.length) {
+                lines.push('', 'SOURCES:');
+                data.sources.forEach((source) => {
+                    lines.push(`- ${source.title}${source.url ? ' — ' + source.url : ''}`);
+                });
+            }
+            if (data.warnings.length) {
+                lines.push('', 'WARNINGS:');
+                data.warnings.forEach((warning) => lines.push(`- ${warning}`));
+            }
+            return lines.join('\n');
+        }
+
+        function renderShort(data) {
+            shortTitle.textContent = data.title;
+            shortHook.textContent = data.hook;
+
+            shortKeyword.textContent = `Searched: ${data.search_keyword}`;
+            shortKeyword.title = 'Resolved Xiaohongshu search keyword';
+            shortMeta.textContent = `${data.platform} · ${data.duration_seconds}s · ${data.language.toUpperCase()}`;
+
+            const grounding = GROUNDING_STYLES[data.grounding] || GROUNDING_STYLES.none;
+            shortGrounding.textContent = grounding.label;
+            shortGrounding.className = `pill ${grounding.cls}`;
+
+            if (data.warnings.length) {
+                shortWarnings.innerHTML = data.warnings.map((warning) => `
+                    <p class="flex gap-2 text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                        <span aria-hidden="true">&#9888;</span>
+                        <span>${escapeHtml(warning)}</span>
+                    </p>
+                `).join('');
+                shortWarnings.classList.remove('hidden');
+            } else {
+                shortWarnings.innerHTML = '';
+                shortWarnings.classList.add('hidden');
+            }
+
+            sceneList.innerHTML = data.scenes.map((scene) => renderScene(scene, data.scenes.length)).join('');
+
+            shortCaption.textContent = data.caption || 'No caption returned.';
+            shortTags.innerHTML = data.hashtags
+                .map((tag) => `<span class="pill bg-primary-50 text-primary-700">${escapeHtml(tag)}</span>`)
+                .join('');
+
+            sourceList.innerHTML = renderSources(data.sources);
+            state.short = data;
+        }
+
+        document.getElementById('shortForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            const query = document.getElementById('query').value.trim();
+            const duration_seconds = parseInt(document.getElementById('duration').value, 10);
+            const platform = document.getElementById('platform').value;
+
+            if (query.length < 3) {
+                showError('Please ask a question with at least 3 characters.');
+                return;
+            }
+
+            shortResults.classList.add('hidden');
+            itineraryResults.classList.add('hidden');
+            error.classList.add('hidden');
+            startLoading('short');
+            generateShortBtn.disabled = true;
+
+            try {
+                const response = await fetch('/generate-short', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ query, duration_seconds, platform }),
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    if (response.status === 401) {
+                        openLogin();
+                        throw new Error('Sign in to Xiaohongshu to search notes.');
+                    }
+                    throw new Error(readError(errData, response.status));
+                }
+
+                const data = await response.json();
+                renderShort(data);
+
+                stopLoading();
+                shortResults.classList.remove('hidden');
+                shortResults.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                stopLoading();
+                generateShortBtn.disabled = false;
+            }
+        });
+
+        document.getElementById('copyScriptBtn').addEventListener('click', (event) => {
+            if (!state.short) return;
+            copyText(buildScriptText(state.short), event.currentTarget, 'Copy full script');
+        });
+
+        document.getElementById('copyCaptionBtn').addEventListener('click', (event) => {
+            if (!state.short) return;
+            copyText(state.short.caption, event.currentTarget, 'Copy');
+        });
+
+        // ------------------------------------------------------------------
+        // Boot
+        // ------------------------------------------------------------------
+
+        tabItinerary.addEventListener('click', () => setMode('itinerary'));
+        tabShort.addEventListener('click', () => setMode('short'));
+
+        // Ask the MCP container whether Xiaohongshu is signed in; if not, prompt
+        // with the QR flow instead of letting the first search fail silently.
+        refreshLoginStatus({ prompt: true });
     </script>
 </body>
 </html>

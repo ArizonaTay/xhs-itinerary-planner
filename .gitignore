@@ -29,3 +29,11 @@ Thumbs.db
 
 # Docker
 .docker/
+
+# Test / log artifacts
+.pytest_cache/
+*.log
+
+# xhs-mcp container state (cookies, browser profile, published images)
+data/
+images/

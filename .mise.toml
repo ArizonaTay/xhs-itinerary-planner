@@ -1,3 +1,58 @@
 [tools]
 python = "3.11"
 uv = "latest"
+
+# A project venv, created on demand. Keeps `mise run dev` / `test` inside the
+# pinned Python without touching system packages (PEP 668-safe on Ubuntu).
+[env]
+_.python.venv = { path = ".venv", create = true }
+
+# ---------------------------------------------------------------------------
+# Tasks — run with `mise run <name>`, list with `mise tasks`
+# ---------------------------------------------------------------------------
+
+[tasks.up]
+description = "Spin up the whole stack in Docker (Xiaohongshu MCP + API) on http://localhost:8000"
+run = "docker compose up -d --build"
+
+[tasks.build]
+description = "Build the API Docker image without starting anything"
+run = "docker compose build"
+
+[tasks.dev]
+description = "One command: install deps, start the MCP container, wait for it, run the API locally"
+# A run array is sequential; depends would start these in parallel.
+run = [
+  { task = "install" },
+  "docker compose up -d xhs-mcp",
+  "python -m app.diagnostics --wait 45",
+  "uvicorn main:app --reload --port 8000",
+]
+
+[tasks.doctor]
+description = "Diagnose why the API cannot reach the xhs-mcp container"
+run = "python -m app.diagnostics"
+
+[tasks.mcp]
+description = "Start only the xhs-mcp container (used by `mise run dev`)"
+run = "docker compose up -d xhs-mcp"
+
+[tasks.install]
+description = "Create the venv (if needed) and install Python dependencies"
+run = "uv pip install -r requirements-dev.txt"
+
+[tasks.test]
+description = "Run the test suite (mocked: no Docker, no keys, no network)"
+run = "python -m pytest -q"
+
+[tasks.check]
+description = "Report whether the API is up and whether Xiaohongshu is signed in"
+run = "curl -sS http://localhost:8000/api/xhs/login"
+
+[tasks.logs]
+description = "Follow the container logs"
+run = "docker compose logs -f"
+
+[tasks.down]
+description = "Stop and remove the containers"
+run = "docker compose down"
