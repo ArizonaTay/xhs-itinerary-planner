@@ -4,6 +4,7 @@ Turns Xiaohongshu (Little Red Book) travel notes into two things:
 
 - **Itineraries** — day-by-day plans split into *Viral Hits* and *Fresh Finds*
 - **Short-video scripts** — a shootable Reels/Shorts/TikTok script (hook → timed scenes → caption → hashtags) grounded in the notes it was built from
+- **Video drafts** — the same script rendered as a silent vertical MP4 (1080×1920, captions burned in), ready for voiceover and music in an editor
 
 ## Architecture
 
@@ -18,6 +19,7 @@ Browser (Tailwind UI) → FastAPI → MCP Client (Streamable HTTP) → xhs-mcp c
 ## Prerequisites
 
 - [Docker Desktop](https://www.docker.com/products/docker-desktop/) (with WSL2 backend on Windows)
+- [`ffmpeg`](https://ffmpeg.org/) for video drafts — `sudo apt install ffmpeg` (Ubuntu), `winget install Gyan.FFmpeg` (Windows); the Docker image already has it
 - Python 3.11+ (for local development)
 - An API key for any OpenAI-compatible LLM — DeepSeek, OpenAI, OpenRouter, Moonshot/Kimi, a local Ollama, etc.
 - A Xiaohongshu account — you sign in by scanning a QR code in the app
@@ -144,6 +146,17 @@ Start with `mise run doctor`. It prints the configured URL, the container state,
 - Gateway IPs change when WSL restarts. For a stable setup, run `mise run up` (both services inside Docker, talking over the compose network) or run `dev` from Windows PowerShell.
 - Nothing answers? `docker compose logs --tail 50 xhs-mcp` — first boot downloads a headless browser, so give it a minute.
 
+### "Download video" answers 503 about ffmpeg
+
+Video drafts need a system `ffmpeg`, which the Python package cannot provide:
+
+```bash
+sudo apt install ffmpeg fonts-noto-cjk   # Ubuntu / WSL
+winget install Gyan.FFmpeg               # Windows
+```
+
+`mise run doctor` prints the resolved ffmpeg path (or `MISSING`). The Docker image installs both already.
+
 ### Logs show `GET http://localhost:18060/mcp "405 Method Not Allowed"` and reconnecting
 
 Normal, and not a failure. The MCP SDK opens an optional server-notification stream, but `xiaohongshu-mcp` only implements `POST`, so the SDK retries while a request is in flight. The call itself still completes — measured against this container: `initialize` ≈ 30 ms, `check_login_status` ≈ 8 s server-side (which is why the status chip settles slowly). `main.py` sets `httpx`, `httpcore` and `mcp.client.streamable_http` to WARNING so the retry chatter stays out of the log.
@@ -172,6 +185,7 @@ Normal, and not a failure. The MCP SDK opens an optional server-notification str
 4. The LLM writes a timed script; scene timings are validated and rebalanced when the model's numbers don't add up
 5. Cited note titles are resolved back to **real** note URLs — the model never supplies a link
 6. If a detail (price, bus time, opening hours) is missing from the notes, the script marks it `[verify]` and the response downgrades from `grounding: "full"` to `"partial"` with warnings shown in the UI
+7. **Download video** re-runs the pipeline and renders a draft: each scene becomes a 1080×1920 frame (cited note cover blurred behind a scrim, headline, voiceover caption) encoded by ffmpeg with fades. No audio track — the voiceover is already on screen; add voice/music in your editor.
 
 ## API
 
@@ -180,6 +194,7 @@ Normal, and not a failure. The MCP SDK opens an optional server-notification str
 | `GET` | `/` | Tailwind UI |
 | `POST` | `/generate-itinerary` | `{"destination": str, "days": 1-30}` → `{viral_hits[], fresh_finds[]}` |
 | `POST` | `/generate-short` | `{"query": str, "duration_seconds": 15-90, "platform": "shorts"\|"reels"\|"tiktok"\|"xhs", "language"?: "en"\|"zh"}` → script |
+| `POST` | `/generate-short/video` | Same body → `video/mp4` draft (silent, 1080×1920, captions burned in) |
 | `GET` | `/api/xhs/login` | Xiaohongshu session status for the MCP container |
 | `POST` | `/api/xhs/login/qrcode` | Login QR code as a `data:image/png;base64,…` URL |
 | `POST` | `/api/xhs/logout` | Clears the container's session (`delete_cookies`) |
@@ -234,6 +249,7 @@ Error behaviour: `401` not signed in to Xiaohongshu (the UI opens the QR prompt)
 │   ├── llm.py               # OpenAI-compatible JSON client with one repair retry
 │   ├── itinerary.py         # itinerary generation
 │   ├── short.py             # keyword resolution, timing repair, grounding
+│   ├── video.py             # Pillow frames + ffmpeg encode for MP4 drafts
 │   └── routes.py            # FastAPI app and endpoints
 ├── main.py                  # ASGI entrypoint: `uvicorn main:app`
 ├── static/index.html        # Tailwind UI: tabs, QR sign-in, script renderer
@@ -252,4 +268,5 @@ Error behaviour: `401` not signed in to Xiaohongshu (the UI opens the QR prompt)
 - **Frontend**: Tailwind CSS (CDN) + Vanilla JS
 - **MCP Integration**: Python `mcp` client via Streamable HTTP transport
 - **AI**: any OpenAI-compatible API — defaults to DeepSeek `deepseek-chat`
+- **Video**: Pillow (frames) + ffmpeg (H.264 encode)
 - **Data Source**: Xiaohongshu via `xpzouying/xiaohongshu-mcp` Docker image

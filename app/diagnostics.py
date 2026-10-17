@@ -11,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import shutil
 import subprocess
 import sys
 import time
@@ -159,6 +160,7 @@ def report() -> list[tuple[str, bool, str]]:
     print(f"MCP URL : {settings.xhs.mcp_url}")
     print(f"Timeout : {settings.xhs.timeout_seconds}s")
     print(f"API key : {'set' if settings.deepseek.api_key else 'missing'}")
+    print(f"ffmpeg  : {shutil.which('ffmpeg') or 'MISSING (video drafts disabled)'}")
 
     state = docker_state()
     print("\n== docker ==")

@@ -1,4 +1,4 @@
-"""Xiaohongshu note retrieval and normalization.
+﻿"""Xiaohongshu note retrieval and normalization.
 
 MCP payload shapes are undocumented and change between releases, so
 normalization is defensive: unknown structures yield ``[]`` instead of raising.
@@ -112,6 +112,16 @@ def _merge_card(source: dict) -> dict:
     return merged
 
 
+def _extract_cover(source: dict) -> str | None:
+    """Cover image URL, when the payload carries one (used for video frames)."""
+    cover = source.get("cover") or source.get("coverUrl") or source.get("cover_url")
+    if isinstance(cover, dict):
+        cover = _first_present(cover, ("urlDefault", "urlPre", "url", "url_default"))
+    if isinstance(cover, str) and cover.startswith("http"):
+        return cover
+    return None
+
+
 def _note_from_dict(source: dict) -> dict | None:
     """Build a normalized note from a dict, or None when it is not a note."""
     note_id = _first_present(source, _NOTE_ID_KEYS)
@@ -132,6 +142,7 @@ def _note_from_dict(source: dict) -> dict | None:
         "likes": _extract_likes(source),
         "url": str(url),
         "xsec_token": _first_present(source, _NOTE_TOKEN_KEYS),
+        "cover_url": _extract_cover(source),
     }
 
 
@@ -207,7 +218,7 @@ async def search_notes(keyword: str) -> list[dict]:
     return parsed
 
 
-def _source_key(title: str) -> str:
+def source_key(title: str) -> str:
     """Loose comparison key so model-quoted titles match normalized ones."""
     return re.sub(r"[^\w\u4e00-\u9fff]+", "", title or "").lower()
 
@@ -217,18 +228,18 @@ def resolve_sources(
 ) -> list[NoteRef]:
     """Map model-cited titles back to real notes.
 
-    URLs, authors, and like counts always come from the scraped notes — a quoted
+    URLs, authors, and like counts always come from the scraped notes â€” a quoted
     title is the only thing the model is trusted with.
     """
     cap = limit or settings.short.max_sources
-    by_key = {_source_key(note["title"]): note for note in notes}
+    by_key = {source_key(note["title"]): note for note in notes}
     resolved: list[NoteRef] = []
     seen: set[str] = set()
     for entry in model_sources or []:
         title = entry.get("title") if isinstance(entry, dict) else entry
         if not isinstance(title, str):
             continue
-        note = by_key.get(_source_key(title))
+        note = by_key.get(source_key(title))
         if not note or note["url"] in seen:
             continue
         seen.add(note["url"])

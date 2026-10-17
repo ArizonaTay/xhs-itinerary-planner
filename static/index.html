@@ -221,12 +221,20 @@
             </div>
 
             <div class="bg-white rounded-2xl shadow-lg p-6 mb-6">
-                <div class="flex items-center justify-between mb-5">
+                <div class="flex flex-wrap items-center justify-between gap-2 mb-5">
                     <h3 class="font-bold text-slate-800">Scene by scene</h3>
-                    <button id="copyScriptBtn" type="button" class="text-sm font-semibold text-primary-600 hover:text-primary-700 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition">
-                        Copy full script
-                    </button>
+                    <div class="flex items-center gap-2">
+                        <button id="downloadVideoBtn" type="button" class="text-sm font-semibold text-white bg-gradient-to-r from-primary-600 to-accent-600 hover:from-primary-700 hover:to-accent-700 px-3 py-1.5 rounded-lg transition disabled:opacity-60 disabled:cursor-not-allowed">
+                            Download video (MP4)
+                        </button>
+                        <button id="copyScriptBtn" type="button" class="text-sm font-semibold text-primary-600 hover:text-primary-700 px-3 py-1.5 rounded-lg hover:bg-primary-50 transition">
+                            Copy full script
+                        </button>
+                    </div>
                 </div>
+                <p id="videoHint" class="text-xs text-slate-400 mb-4">
+                    Renders a silent 1080×1920 draft from the script (captions burned in); voiceover and music go in your editor.
+                </p>
                 <div id="sceneList" class="space-y-5"></div>
             </div>
 
@@ -279,7 +287,7 @@
     </div>
 
     <script>
-        const state = { mode: 'itinerary', short: null, loadingTimer: null, xhsStatus: 'checking' };
+        const state = { mode: 'itinerary', short: null, shortRequest: null, loadingTimer: null, xhsStatus: 'checking' };
 
         const tabItinerary = document.getElementById('tabItinerary');
         const tabShort = document.getElementById('tabShort');
@@ -744,6 +752,7 @@
             const query = document.getElementById('query').value.trim();
             const duration_seconds = parseInt(document.getElementById('duration').value, 10);
             const platform = document.getElementById('platform').value;
+            state.shortRequest = { query, duration_seconds, platform };
 
             if (query.length < 3) {
                 showError('Please ask a question with at least 3 characters.');
@@ -794,6 +803,46 @@
         document.getElementById('copyCaptionBtn').addEventListener('click', (event) => {
             if (!state.short) return;
             copyText(state.short.caption, event.currentTarget, 'Copy');
+        });
+
+        document.getElementById('downloadVideoBtn').addEventListener('click', async (event) => {
+            if (!state.shortRequest) return;
+            const button = event.currentTarget;
+            const idleLabel = button.textContent;
+            button.disabled = true;
+            button.textContent = 'Rendering… (up to a minute)';
+            error.classList.add('hidden');
+            startLoading('short');
+
+            try {
+                const response = await fetch('/generate-short/video', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(state.shortRequest),
+                });
+
+                if (!response.ok) {
+                    const errData = await response.json().catch(() => ({}));
+                    if (response.status === 401) openLogin();
+                    throw new Error(readError(errData, response.status));
+                }
+
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'short-draft.mp4';
+                document.body.appendChild(link);
+                link.click();
+                link.remove();
+                setTimeout(() => URL.revokeObjectURL(url), 10000);
+            } catch (err) {
+                showError(err.message);
+            } finally {
+                stopLoading();
+                button.disabled = false;
+                button.textContent = idleLabel;
+            }
         });
 
         // ------------------------------------------------------------------

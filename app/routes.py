@@ -7,13 +7,15 @@ Business rules live in the feature modules (``notes``, ``short``,
 from __future__ import annotations
 
 import logging
+import shutil
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.background import BackgroundTask
 
-from . import login
+from . import login, video
 from .config import PROJECT_ROOT, settings
 from .itinerary import generate_itinerary
 from .models import (
@@ -82,9 +84,8 @@ async def create_itinerary(request: TravelRequest):
     )
 
 
-@app.post("/generate-short", response_model=ShortResponse)
-async def create_short(request: ShortRequest):
-    """Question -> search keyword -> notes -> grounded, timed script."""
+async def _build_short(request: ShortRequest) -> tuple[dict, list[dict]]:
+    """Shared pipeline: keyword -> notes -> grounded script payload."""
     plan = await extract_search_plan(request.query)
     keyword = plan["search_keyword"]
     language = request.language or plan["language"]
@@ -107,7 +108,37 @@ async def create_short(request: ShortRequest):
         platform=request.platform,
         language=language,
     )
+    return payload, notes
+
+
+@app.post("/generate-short", response_model=ShortResponse)
+async def create_short(request: ShortRequest):
+    """Question -> search keyword -> notes -> grounded, timed script."""
+    payload, _notes = await _build_short(request)
     return ShortResponse(**payload)
+
+
+@app.post("/generate-short/video")
+async def create_short_video(request: ShortRequest):
+    """Same pipeline, rendered to a silent vertical MP4 draft."""
+    if not video.available():
+        raise HTTPException(
+            status_code=503,
+            detail=(
+                "ffmpeg is not installed, so the video cannot be rendered. "
+                "Install it (Ubuntu: `sudo apt install ffmpeg`; Windows: "
+                "`winget install Gyan.FFmpeg`) and retry."
+            ),
+        )
+
+    payload, notes = await _build_short(request)
+    path, workdir = await video.render(payload, notes)
+    return FileResponse(
+        path,
+        media_type="video/mp4",
+        filename="short-draft.mp4",
+        background=BackgroundTask(shutil.rmtree, workdir, ignore_errors=True),
+    )
 
 
 @app.get("/api/xhs/login", response_model=XhsLoginStatus)
