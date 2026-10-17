@@ -414,7 +414,7 @@
         const qrHint = document.getElementById('qrHint');
         const qrLoading = document.getElementById('qrLoading');
 
-        const login = { pollTimer: null };
+        const login = { pollTimer: null, pollActive: false };
 
         const STATUS_STYLES = {
             checking: { dot: 'bg-slate-400', chip: 'bg-slate-100 text-slate-600', label: 'Xiaohongshu: checking…' },
@@ -458,7 +458,8 @@
         }
 
         function stopLoginPolling() {
-            clearInterval(login.pollTimer);
+            login.pollActive = false;
+            clearTimeout(login.pollTimer);
             login.pollTimer = null;
         }
 
@@ -499,20 +500,30 @@
             qrLoading.classList.add('hidden');
             qrWrap.classList.remove('hidden');
 
-            login.pollTimer = setInterval(async () => {
+            // check_login_status takes seconds on the container, so poll
+            // sequentially: wait for the answer, then pause, then ask again.
+            login.pollActive = true;
+            const pollOnce = async () => {
+                if (!login.pollActive) return;
                 try {
                     const statusRes = await fetch('/api/xhs/login');
-                    if (!statusRes.ok) return;
-                    const statusData = await statusRes.json();
-                    if (statusData.logged_in) {
-                        stopLoginPolling();
-                        setXhsStatus('in', statusData.username ? `Xiaohongshu: ${statusData.username}` : 'Xiaohongshu: signed in');
-                        loginModal.classList.add('hidden');
+                    if (statusRes.ok) {
+                        const statusData = await statusRes.json();
+                        if (statusData.logged_in) {
+                            login.pollActive = false;
+                            setXhsStatus('in', statusData.username ? `Xiaohongshu: ${statusData.username}` : 'Xiaohongshu: signed in');
+                            loginModal.classList.add('hidden');
+                            return;
+                        }
                     }
                 } catch (err) {
                     /* keep polling; transient network blips are fine */
                 }
-            }, 3000);
+                if (login.pollActive) {
+                    login.pollTimer = setTimeout(pollOnce, 3000);
+                }
+            };
+            pollOnce();
         }
 
         xhsStatusBtn.addEventListener('click', async () => {

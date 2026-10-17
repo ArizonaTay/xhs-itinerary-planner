@@ -144,6 +144,10 @@ Start with `mise run doctor`. It prints the configured URL, the container state,
 - Gateway IPs change when WSL restarts. For a stable setup, run `mise run up` (both services inside Docker, talking over the compose network) or run `dev` from Windows PowerShell.
 - Nothing answers? `docker compose logs --tail 50 xhs-mcp` — first boot downloads a headless browser, so give it a minute.
 
+### Logs show `GET http://localhost:18060/mcp "405 Method Not Allowed"` and reconnecting
+
+Normal, and not a failure. The MCP SDK opens an optional server-notification stream, but `xiaohongshu-mcp` only implements `POST`, so the SDK retries while a request is in flight. The call itself still completes — measured against this container: `initialize` ≈ 30 ms, `check_login_status` ≈ 8 s server-side (which is why the status chip settles slowly). `main.py` sets `httpx`, `httpcore` and `mcp.client.streamable_http` to WARNING so the retry chatter stays out of the log.
+
 ## How it works
 
 ### Signing in
