@@ -26,6 +26,8 @@ _NOTE_TITLE_KEYS = ("title", "display_title", "displayTitle", "note_title")
 _NOTE_DESC_KEYS = ("desc", "description", "content", "note_content", "noteContent")
 _NOTE_URL_KEYS = ("url", "note_url", "noteUrl", "share_url", "shareUrl")
 _NOTE_AUTHOR_KEYS = ("author", "user", "user_info", "userInfo", "nickname", "user_name")
+_NOTE_CARD_KEYS = ("noteCard", "note_card", "note")
+_NOTE_TOKEN_KEYS = ("xsecToken", "xsec_token")
 _NOTE_LIKE_KEYS = (
     "likes",
     "liked_count",
@@ -94,6 +96,22 @@ def _extract_likes(source: dict) -> int | None:
     return parse_count(value)
 
 
+def _merge_card(source: dict) -> dict:
+    """Flatten wrapper+card payloads.
+
+    Search results look like ``{id, xsecToken, noteCard: {displayTitle, ...}}``:
+    identity lives on the wrapper, the human-readable fields inside the card.
+    """
+    merged = dict(source)
+    for key in _NOTE_CARD_KEYS:
+        card = source.get(key)
+        if not isinstance(card, dict):
+            continue
+        for field, value in card.items():
+            merged.setdefault(field, value)
+    return merged
+
+
 def _note_from_dict(source: dict) -> dict | None:
     """Build a normalized note from a dict, or None when it is not a note."""
     note_id = _first_present(source, _NOTE_ID_KEYS)
@@ -113,6 +131,7 @@ def _note_from_dict(source: dict) -> dict | None:
         "author": _extract_author(source),
         "likes": _extract_likes(source),
         "url": str(url),
+        "xsec_token": _first_present(source, _NOTE_TOKEN_KEYS),
     }
 
 
@@ -121,7 +140,7 @@ def _collect_notes(node: Any, found: list[dict], depth: int = 0) -> None:
     if depth > 8:
         return
     if isinstance(node, dict):
-        note = _note_from_dict(node)
+        note = _note_from_dict(_merge_card(node))
         if note:
             found.append(note)
         for value in node.values():

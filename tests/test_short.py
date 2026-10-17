@@ -7,29 +7,34 @@ import pytest
 
 from app.notes import normalize_notes
 
+# Mirrors the real xiaohongshu-mcp payload: the id and xsecToken sit on the
+# wrapper, while the human-readable fields live inside noteCard.
 NOTES_PAYLOAD = {
     "feeds": [
         {
             "id": "abc123",
+            "xsecToken": "token-abc",
+            "modelType": "note",
             "noteCard": {
-                "noteId": "abc123",
+                "type": "normal",
                 "displayTitle": "雪乡一日游攻略｜哈尔滨出发当天往返",
-                "desc": "早6点从哈尔滨出发，车程约5小时，晚上回哈尔滨。",
                 "user": {"nickname": "旅行的意义"},
                 "interactInfo": {"likedCount": "1.2万"},
             },
         },
         {
             "id": "def456",
+            "xsecToken": "token-def",
+            "modelType": "note",
             "noteCard": {
-                "noteId": "def456",
-                "title": "雪乡避坑指南｜门票和交通",
-                "desc": "门票以景区当日公示为准。",
+                "type": "video",
+                "displayTitle": "雪乡避坑指南｜门票和交通",
                 "user": {"nickname": "东北小张"},
                 "interactInfo": {"likedCount": 998},
             },
         },
-    ]
+    ],
+    "count": 2,
 }
 
 SCRIPT_PAYLOAD = {
@@ -254,5 +259,6 @@ def test_normalize_notes_handles_mcp_payload_shapes():
     assert day_trip["url"] == "https://www.xiaohongshu.com/explore/abc123"
     assert day_trip["author"] == "旅行的意义"
     assert day_trip["likes"] == 12000
+    assert day_trip["xsec_token"] == "token-abc"
     assert by_title["雪乡避坑指南｜门票和交通"]["likes"] == 998
     assert normalize_notes([{"unexpected": {"shape": True}}]) == []
